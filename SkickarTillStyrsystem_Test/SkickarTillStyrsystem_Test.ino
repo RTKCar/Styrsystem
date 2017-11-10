@@ -1,39 +1,30 @@
-#include <Servo.h> 
-Servo SteeringServo;
-bool MessageIncoming=false;
 //***CAN-Buss variabes**
 #include <mcp_can.h>
 #include <SPI.h>
-int RecievedData[8];
 long unsigned int rxId;
 unsigned char len = 0;
 unsigned char rxBuf[8];
 char msgString[128];                            // Array to store serial string
 #define CAN0_INT 2                              // Set INT to pin 2
 MCP_CAN CAN0(10);                               // Set CS to pin 10
-byte data[8] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
+byte data[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 int sendId;
 void setup(){
-  SteeringServo.attach(9);
   SetupCANBuss();
-  Turn(90);
-  Serial.println("90 degrees");
 }
 
 void loop(){
- if(MessageIncoming){
-    MessageIncoming=false;
-    ReadMessage();
-    Serial.print("rxId: ");
-    Serial.println(rxId);
-    if(rxId==10){
-     Turn(RecievedData[0]);
-      
-     
-     
-    }
-  }   
- 
+
+  for(int i=0;i<17;i++){
+    data[0]=50+i*5;
+    sendId = 10;
+    SendData();
+    Serial.print("Sent:");
+    Serial.println(data[0]);
+    delay(3000);
+    
+  }
+  
    
 }
 
@@ -50,18 +41,11 @@ void SetupCANBuss(){
   
   CAN0.setMode(MCP_NORMAL);                     // Set operation mode to normal so the MCP2515 sends acks to received data.
   pinMode(CAN0_INT, INPUT);                            // Configuring pin for /INT input
-  attachInterrupt(digitalPinToInterrupt(CAN0_INT), RecievedMessage, FALLING);// interrupt activates when canbuss message can be read
+  attachInterrupt(digitalPinToInterrupt(CAN0_INT), ReadMessage, FALLING);// interrupt activates when canbuss message can be read
   
   
 }
 
-
-void RecievedMessage(){
-  MessageIncoming=true;
-  
-  }
-
-  
 void ReadMessage(){
 
     CAN0.readMsgBuf(&rxId, &len, rxBuf);      // Read data: len = data length, buf = data byte(s)
@@ -70,17 +54,16 @@ void ReadMessage(){
       sprintf(msgString, "Extended ID: 0x%.8lX  DLC: %1d  Data:", (rxId & 0x1FFFFFFF), len);
     else
       sprintf(msgString, "Standard ID: 0x%.3lX       DLC: %1d  Data:", rxId, len);
-   
-   // Serial.print(msgString);
-    
+  
+    Serial.print(msgString);
+  
     if((rxId & 0x40000000) == 0x40000000){    // Determine if message is a remote request frame.
       sprintf(msgString, " REMOTE REQUEST FRAME");
       Serial.print(msgString);
     } else {
       for(byte i = 0; i<len; i++){
-       sprintf(msgString, " %d", rxBuf[i]);
-       RecievedData[i]=atoi(msgString);     //Converts char to int
-        
+        sprintf(msgString, " 0x%.2X", rxBuf[i]);
+        Serial.print(msgString);
       }
     }
         
@@ -97,18 +80,3 @@ void SendData(){
     Serial.println("Error Sending Message...");
   }
 }
-void Turn(int degree){
-    
-    SteeringServo.write(degree);
-    Serial.print("Turned to: ");
-    Serial.print(degree);
-    Serial.println(" degrees");
-    sendId=0x2;
-    ClearData();
-    SendData();
-  }
-void ClearData(){
-
-    for(int i=0;i<8;i++)
-      data[i]=0x00;
-}  

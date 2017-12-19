@@ -7,12 +7,20 @@ int recievedId;
 void setup(){
   SteeringServo.attach(9);
   SetupCANBuss();
-  Turn(100);
+  Turn(60);
   Serial.println("100 degrees");
   delay(3000);
+  
 }
 
 void loop(){
+/*
+for(int i=60;i<130;i=i+10){
+      Turn(i);
+      delay(1000);
+  }
+  */
+  
   if(messageAvalible()){
    getMessage(message);
    recievedId=getRecievedId();
